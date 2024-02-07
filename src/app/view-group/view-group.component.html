@@ -1,0 +1,18 @@
+<mat-card
+  class="view-group"
+  [id]="options.id"
+  [style]="styles"
+  cdkDrag
+  cdkDragBoundary=".content"
+  (cdkDragMoved)="onDragMoved($event)"
+>
+  <div class="head" cdkDragHandle>{{ options.name }}</div>
+  <mat-progress-bar
+    *ngIf="progressValue"
+    mode="determinate"
+    [value]="progressValue"
+  ></mat-progress-bar>
+  <gui-form [config]="options.config" [model]="model" [form]="form"></gui-form>
+  <div class="anchor anchor-left" [id]="'anchor_info' + options.id"></div>
+  <div class="anchor anchor-right" [id]="'anchor_' + options.id"></div>
+</mat-card>
