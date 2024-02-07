@@ -1,5 +1,6 @@
 import {
   AfterViewInit,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   OnDestroy,
@@ -25,9 +26,10 @@ import { GestureService } from "./service/gesture.service";
 export class AppComponent implements OnInit, AfterViewInit {
   title = "ultima";
 
+  loading: boolean = true;
+
   groupList: ViewGroupOptions[] = [];
 
-  mainStyle: Record<string, string> = {};
   contentStyle: Record<string, string> = {};
 
   @ViewChild("main") mainRef: ElementRef | undefined;
@@ -35,7 +37,8 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   constructor(
     private groupService: GroupService,
-    private gestureService: GestureService
+    private gestureService: GestureService,
+    private cdRef: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -123,29 +126,50 @@ export class AppComponent implements OnInit, AfterViewInit {
     this.groupService.init(this.groupList);
   }
 
-  initContent() {
-    const bodyWidth = document.body.clientWidth;
-    const bodyHeight = document.body.clientHeight;
-    this.updateMainStyle("width", bodyWidth * 2 + "px");
-    this.updateMainStyle("height", bodyHeight * 2 + "px");
-    this.updateMainStyle(
-      "transform",
-      `translate(-${bodyWidth / 2}px, -${bodyHeight / 2}px)`
-    );
-    console.log(this.mainStyle);
+  initGesture() {
+    const bodyWidth = this.mainRef?.nativeElement.clientHeight;
+    const bodyHeight = this.mainRef?.nativeElement.clientHeight;
+    const width = bodyWidth * 2;
+    const height = bodyHeight * 2;
+    const left = bodyWidth / 2;
+    const top = bodyHeight / 2;
+    this.gestureService.init(this.contentRef?.nativeElement, {
+      offset: [left, top],
+      worldSize: {
+        width,
+        height,
+      },
+      viewAreaSize: {
+        width: bodyWidth,
+        height: bodyHeight,
+      },
+    });
   }
 
-  updateMainStyle(name: string, value: string) {
-    this.mainStyle = { ...this.mainStyle, ...{ [name]: value } };
+  initContent() {
+    const [left, top] = this.gestureService.viewOffset;
+    const { width, height } = this.gestureService.viewWorldSize;
+    this.updateContentStyle("width", width + "px");
+    this.updateContentStyle("height", height + "px");
+    this.updateContentStyle("left", `${left}px`);
+    this.updateContentStyle("top", `${top}px`);
+  }
+
+  updateContentStyle(name: string, value: string) {
+    this.contentStyle = { ...this.contentStyle, ...{ [name]: value } };
   }
 
   ngAfterViewInit() {
-    console.log(this.contentRef?.nativeElement);
+    this.initGesture();
     this.initContent();
-    this.gestureService.init(this.contentRef?.nativeElement);
-    this.initLinePath();
+    this.loading = false;
+    this.cdRef.detectChanges();
+    setTimeout(() => {
+      this.initLinePath();
+    }, 0);
     this.gestureService.onOffsetChange(([x, y]: [number, number]) => {
-      this.updateMainStyle("transform", `translate(-${x}px, -${y}px)`);
+      this.updateContentStyle("left", `${x}px`);
+      this.updateContentStyle("top", `${y}px`);
     });
   }
 

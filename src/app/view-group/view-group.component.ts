@@ -1,11 +1,24 @@
-import { Component, EventEmitter, Input, OnInit, Output } from "@angular/core";
+import {
+  AfterViewInit,
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+} from "@angular/core";
 import { GuiModule } from "@acrodata/gui";
 import { FormGroup } from "@angular/forms";
 import { Postion, ViewGroupOptions } from "./view-group-options";
 import { MatCardModule } from "@angular/material/card";
-import { CdkDrag, CdkDragHandle, CdkDragMove } from "@angular/cdk/drag-drop";
+import {
+  CdkDrag,
+  CdkDragEnd,
+  CdkDragHandle,
+  CdkDragMove,
+  CdkDragStart,
+} from "@angular/cdk/drag-drop";
 import { MatProgressBarModule } from "@angular/material/progress-bar";
 import { NgIf } from "@angular/common";
+import { GestureService } from "../service/gesture.service";
 
 @Component({
   selector: "app-view-group",
@@ -21,7 +34,7 @@ import { NgIf } from "@angular/common";
   templateUrl: "./view-group.component.html",
   styleUrl: "./view-group.component.scss",
 })
-export class ViewGroupComponent implements OnInit {
+export class ViewGroupComponent implements AfterViewInit {
   @Input() options!: ViewGroupOptions;
   model = {};
   form = new FormGroup({});
@@ -30,17 +43,36 @@ export class ViewGroupComponent implements OnInit {
 
   @Output() postionChange = new EventEmitter<Postion>();
 
-  ngOnInit(): void {
+  constructor(private gestureService: GestureService) {}
+
+  ngAfterViewInit() {
     this.setStyles();
   }
 
   setStyles() {
-    this.styles["left"] = this.options.postion.x + "px";
-    this.styles["top"] = this.options.postion.y + "px";
+    const postion = this.gestureService.convertToHtmlCoords(
+      this.options.postion.x,
+      this.options.postion.y
+    );
+    this.styles = {
+      left: postion.x + "px",
+      top: postion.y + "px",
+    };
+  }
+
+  onDragStarted(event: CdkDragStart) {
+    this.gestureService.setDisabledStatus(true);
   }
 
   onDragMoved(event: CdkDragMove) {
-    const tager = event.source.element.nativeElement;
-    this.postionChange.emit(event.pointerPosition);
+    const postion = this.gestureService.convertToCenteredCoords(
+      event.pointerPosition.x,
+      event.pointerPosition.y
+    );
+    this.postionChange.emit(postion);
+  }
+
+  onDragEnded(event: CdkDragEnd) {
+    this.gestureService.setDisabledStatus(false);
   }
 }

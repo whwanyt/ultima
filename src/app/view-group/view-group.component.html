@@ -4,6 +4,8 @@
   [style]="styles"
   cdkDrag
   cdkDragBoundary=".content"
+  (cdkDragStarted)="onDragStarted($event)"
+  (cdkDragEnded)="onDragEnded($event)"
   (cdkDragMoved)="onDragMoved($event)"
 >
   <div class="head" cdkDragHandle>{{ options.name }}</div>

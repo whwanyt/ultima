@@ -1,11 +1,13 @@
-<main class="main" #main [style]="mainStyle">
+<main class="main" #main>
   <div class="content" #content [style]="contentStyle">
     <svg id="svgContainer" class="svgContainer"></svg>
-    @for (item of groupList; track $index) {
-    <app-view-group
-      [options]="item"
-      (postionChange)="onGroupPostionChange($event, $index)"
-    />
-    }
+    <div class="groups" *ngIf="!loading">
+      @for (item of groupList; track $index) {
+      <app-view-group
+        [options]="item"
+        (postionChange)="onGroupPostionChange($event, $index)"
+      />
+      }
+    </div>
   </div>
 </main>

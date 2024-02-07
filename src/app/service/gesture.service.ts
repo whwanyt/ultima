@@ -2,24 +2,49 @@ import { Injectable } from "@angular/core";
 import { FullGestureState, Gesture } from "@use-gesture/vanilla";
 import { inertia } from "popmotion";
 
+export interface GestureOptions {
+  offset?: [number, number];
+  worldSize: { width: number; height: number };
+  viewAreaSize: { width: number; height: number };
+  scale?: number;
+}
+
 @Injectable({
   providedIn: "root",
 })
 export class GestureService {
-  private initialScale = 0;
-  private lastPinchTime = 0;
-  private lastWheelTime = 0;
-  private lastClickTime = 0;
-  private lastDragTime = 0;
-  private lastOrigin = [0, 0];
+  private disabled: boolean = false;
+
   private offset = [0, 0];
+
+  private worldSize = {
+    width: 1280,
+    height: 1080,
+  };
+
+  private viewAreaSize = {
+    width: 640,
+    height: 540,
+  };
+
+  get viewOffset() {
+    return this.offset;
+  }
+
+  get viewWorldSize() {
+    return this.worldSize;
+  }
 
   private scaleAnimation = inertia({});
   private offsetAnimation = inertia({});
 
   gestureOffsetChanges: Function[] = [];
 
-  init(element: HTMLElement) {
+  init(element: HTMLElement, options: GestureOptions) {
+    this.offset = options.offset || [0, 0];
+    this.worldSize = options.worldSize || { width: 1280, height: 1080 };
+    this.viewAreaSize = options.viewAreaSize || { width: 640, height: 540 };
+    console.log(this.worldSize);
     new Gesture(element, {
       onDragStart: this.onDragStart.bind(this),
       onDrag: this.onDrag.bind(this),
@@ -28,44 +53,30 @@ export class GestureService {
   }
 
   onDragStart() {
+    if (this.disabled) return;
     this.offsetAnimation?.stop();
     this.scaleAnimation?.stop();
   }
 
   private onDrag(state: FullGestureState<"drag">) {
-    const { pinching, wheeling, timeStamp, delta } = state;
-    if (pinching || wheeling || timeStamp - this.lastPinchTime < 200) {
-      return;
-    }
-    this.setOffset(this.offset[0] - delta[0], this.offset[1] - delta[1]);
+    if (this.disabled) return;
+    const { delta } = state;
+    this.setOffset(delta[0], delta[1]);
   }
 
   private onDragEnd(state: FullGestureState<"drag">) {
-    const { direction, timeStamp, distance, velocity } = state;
-    if (timeStamp - this.lastPinchTime < 200) return;
-    const initialOffset = [...this.offset];
-    const v = Math.sqrt(velocity[0] ** 2 + velocity[1] ** 2);
-    if (v != 0) {
-      this.offsetAnimation = inertia({
-        velocity: v,
-        power: 200,
-        timeConstant: 200,
-        onUpdate: (value) => {
-          this.setOffset(
-            initialOffset[0] - direction[0] * value * (velocity[0] / v),
-            initialOffset[1] - direction[1] * value * (velocity[1] / v)
-          );
-        },
-      });
-    }
-    if (distance[0] > 2 || distance[1] > 2) {
-      this.lastDragTime = timeStamp;
-    }
+    if (this.disabled) return;
+    const { delta } = state;
+    this.setOffset(delta[0], delta[1]);
   }
 
   setOffset(x: number, y: number) {
-    this.offset = [x, y];
-    console.log("setOffset", this.offset);
+    if (
+      x + this.offset[0] > this.worldSize.width - this.viewAreaSize.width ||
+      y + this.offset[1] > this.worldSize.height - this.viewAreaSize.height
+    )
+      return;
+    this.offset = [x + this.offset[0], y + this.offset[1]];
     this.onOffsetChangecallback();
   }
 
@@ -77,5 +88,23 @@ export class GestureService {
     this.gestureOffsetChanges.forEach((fun) => {
       fun(this.offset);
     });
+  }
+
+  setDisabledStatus(status: boolean) {
+    this.disabled = status;
+  }
+
+  convertToHtmlCoords(x: number, y: number) {
+    let toX = x + this.worldSize.width / 2;
+    let toY = y + this.worldSize.height / 2;
+    console.log("convertToHtmlCoords", this.worldSize, toX, toY);
+    return { x: toX, y: toY };
+  }
+
+  convertToCenteredCoords(x: number, y: number) {
+    let toX = x - this.worldSize.width / 2;
+    let toY = y - this.worldSize.height / 2;
+    console.log("convertToCenteredCoords", this.worldSize, toX, toY);
+    return { x: toX, y: toY };
   }
 }
