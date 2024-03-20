@@ -1,4 +1,4 @@
-# ultima
+# minimize template
 - Built with angular and @ acrodata / gui, the flowchart can be configured with simple json and has high component scalability
 ## example
 ### Simple
